@@ -1,6 +1,6 @@
 {
   "name": "@r_masseater/oxlint-typed-rules",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Run ESLint rules that need type information as oxlint JS plugins, starting with TanStack Start's React Server Component rules.",
   "keywords": [
     "eslint",
@@ -52,7 +52,7 @@
   "dependencies": {
     "@effect/platform-node": "catalog:",
     "effect": "catalog:stack",
-    "typescript": "catalog:typescript-api"
+    "typescript-6": "catalog:typescript-api"
   },
   "devDependencies": {
     "@tanstack/eslint-plugin-start": "catalog:",

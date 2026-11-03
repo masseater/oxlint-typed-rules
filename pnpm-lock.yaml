@@ -262,8 +262,8 @@ catalogs:
       specifier: 1.4.0
       version: 1.4.0
   typescript-api:
-    typescript:
-      specifier: 6.0.3
+    typescript-6:
+      specifier: npm:typescript@6.0.3
       version: 6.0.3
 
 overrides:
@@ -409,9 +409,9 @@ importers:
       effect:
         specifier: 4.0.7
         version: 4.0.7
-      typescript:
+      typescript-6:
         specifier: catalog:typescript-api
-        version: 6.0.3
+        version: typescript@6.0.3
     devDependencies:
       '@tanstack/eslint-plugin-start':
         specifier: 'catalog:'

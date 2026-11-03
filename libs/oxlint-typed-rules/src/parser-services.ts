@@ -1,5 +1,5 @@
 import { Option } from "effect";
-import ts from "typescript";
+import ts from "typescript-6";
 import type { Context, Location, Range } from "vite-plus/lint/plugins";
 
 interface RangedNode {

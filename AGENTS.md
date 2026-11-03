@@ -10,6 +10,7 @@
 
 - `libs/oxlint-typed-rules` は npm の `@r_masseater/oxlint-typed-rules` である。型情報を要る ESLint のルールに、tsconfig ごとに TypeScript 6 の Program を作って `parserServices` を渡し、oxlint の JS プラグインとして動かす。
 - 移植したルールは、元のプラグインを `devDependencies` に入れて `dist/` に同梱する。直す点は `patches/` に置き、`@typescript-eslint/utils` は `eslint-utils` だけに差し替えて ESLint を同梱しない。
+- TypeScript 6 は `typescript-6` の別名で依存に入れ、同梱したルールの `typescript` の import も `typescript-6` に書き換える。`typescript` の名前で入れると、使う側の pnpm が vite-plus などの peer をこの版に解決し、vitest が別の実体を読んでテストが落ちる。
 - `upstream/src/__tests__` は元のリポのテストを手を入れずに置いたもので、`vite.config.ts` の alias が oxlint の RuleTester と移植したルールへ向ける。ルールを足すときも元のテストをそのまま持ち込み、すべて通るまで出さない。
 - `globals` は元のリポの lockfile と同じ版に固定する。新しい版では `localStorage` が Node の globals に入り、元のテストの判定が変わる。
 

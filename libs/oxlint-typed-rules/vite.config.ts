@@ -7,11 +7,15 @@ export default defineConfig({
     entry: ["src/index.ts", "src/tanstack-start.ts"],
     platform: "node",
     sourcemap: true,
-    alias: { "@typescript-eslint/utils": local("src/typescript-eslint-utils.ts") },
+    alias: {
+      "@typescript-eslint/utils": local("src/typescript-eslint-utils.ts"),
+    },
     deps: {
       alwaysBundle: ["@tanstack/eslint-plugin-start", "@typescript-eslint/utils", "globals"],
+      neverBundle: ["typescript"],
     },
     dts: true,
+    outputOptions: { paths: { typescript: "typescript-6" } },
   },
   resolve: {
     alias: [
@@ -29,9 +33,11 @@ export default defineConfig({
         replacement: local("upstream/rules/no-client-code-in-server-component.ts"),
       },
       { find: /^vitest$/u, replacement: "vite-plus/test" },
+      { find: /^typescript$/u, replacement: "typescript-6" },
     ],
   },
   test: {
+    server: { deps: { inline: ["@tanstack/eslint-plugin-start"] } },
     include: ["src/**/*.test.ts", "upstream/src/__tests__/*.test.ts"],
   },
 });
