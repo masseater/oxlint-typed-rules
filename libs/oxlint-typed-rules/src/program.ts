@@ -147,10 +147,38 @@ const matchesText = (project: Project, overlay: Overlay): boolean =>
     Option.exists((sourceFile) => sourceFile.text === overlay.text),
   );
 
-const currentProject = (overlay: Overlay): Option.Option<Project> =>
-  Option.fromNullishOr(currentSnapshot().getDefaultProjectForFile(overlay.fileName)).pipe(
-    Option.filter((project) => matchesText(project, overlay)),
+const projectsByDirectory = new WeakMap<Snapshot, Map<string, Project>>();
+
+const directoryOf = (fileName: string): string => Str.replace(/[\\/][^\\/]*$/u, "")(fileName);
+
+const directoryProjects = (snapshot: Snapshot): Map<string, Project> =>
+  Option.fromNullishOr(projectsByDirectory.get(snapshot)).pipe(
+    Option.getOrElse(() => {
+      const created = new Map<string, Project>();
+      projectsByDirectory.set(snapshot, created);
+      return created;
+    }),
   );
+
+const defaultProject = (snapshot: Snapshot, fileName: string): Option.Option<Project> =>
+  Option.fromNullishOr(snapshot.getDefaultProjectForFile(fileName)).pipe(
+    Option.map((project) => {
+      directoryProjects(snapshot).set(directoryOf(fileName), project);
+      return project;
+    }),
+  );
+
+const currentProject = (overlay: Overlay): Option.Option<Project> => {
+  const snapshot = currentSnapshot();
+  return Option.fromNullishOr(directoryProjects(snapshot).get(directoryOf(overlay.fileName))).pipe(
+    Option.filter((project) => matchesText(project, overlay)),
+    Option.orElse(() =>
+      defaultProject(snapshot, overlay.fileName).pipe(
+        Option.filter((project) => matchesText(project, overlay)),
+      ),
+    ),
+  );
+};
 
 const openFile = (overlay: Overlay): Effect.Effect<Option.Option<Project>> =>
   Effect.sync(() => {
@@ -159,7 +187,7 @@ const openFile = (overlay: Overlay): Effect.Effect<Option.Option<Project>> =>
       fileSystem: createFileSystemLayer([[overlay.fileName, overlay.text]]),
     });
     snapshots.set(api, updated);
-    return Option.fromNullishOr(updated.getDefaultProjectForFile(overlay.fileName));
+    return defaultProject(updated, overlay.fileName);
   }).pipe(
     Effect.withSpan("oxlint-typed-rules.open-file", {
       attributes: { fileName: overlay.fileName },
