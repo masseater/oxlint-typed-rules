@@ -46,7 +46,7 @@ catalog:
   "@typescript-eslint/utils": ^8.72.1
 catalogs:
   typescript-api:
-    typescript-6: npm:typescript@6.0.3
+    typescript-7: npm:typescript@7.1.0-beta
   stack:
     "@distilled.cloud/cloudflare": 1.0.0-rc.17
     "@effect/atom-react": 4.0.7
@@ -70,7 +70,7 @@ catalogs:
     steiger: 0.8.1
     tailwindcss: 4.3.3
     textlint: 15.8.0
-    typescript: 7.1.0-dev.20261030.1
+    typescript: 7.1.0-beta
     vite-plus: 1.4.0
 overrides:
   effect: "catalog:stack"

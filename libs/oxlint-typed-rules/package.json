@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "effect": "catalog:stack",
-    "typescript-6": "catalog:typescript-api"
+    "typescript-7": "catalog:typescript-api"
   },
   "devDependencies": {
     "@arethetypeswrong/core": "catalog:",
@@ -68,7 +68,7 @@
   "size-limit": [
     {
       "path": "dist/*.mjs",
-      "limit": "23267 B"
+      "limit": "23825 B"
     }
   ],
   "engines": {

@@ -1,7 +1,27 @@
-import { Cause, Effect, Exit, Layer, ManagedRuntime, Option } from "effect";
+import {
+  Array as Arr,
+  Cause,
+  Effect,
+  Exit,
+  Layer,
+  ManagedRuntime,
+  Option,
+  String as Str,
+  pipe,
+} from "effect";
 import { FetchHttpClient } from "effect/http";
 import { OtlpSerialization, OtlpTracer } from "effect/observability";
-import ts from "typescript-6";
+import type { Node, SourceFile } from "typescript-7/ast";
+import { createFileSystemLayer } from "typescript-7/fs";
+import { API } from "typescript-7/sync";
+import type {
+  Checker,
+  Program as NativeProgram,
+  Project,
+  Snapshot,
+  Symbol as NativeSymbol,
+  SymbolFlags,
+} from "typescript-7/sync";
 
 const tracing = OtlpTracer.layerFromConfig({
   resource: { serviceName: "oxlint-typed-rules" },
@@ -9,183 +29,158 @@ const tracing = OtlpTracer.layerFromConfig({
 
 const runtime = ManagedRuntime.make(tracing);
 
-process.once("beforeExit", () => {
-  Effect.runFork(runtime.disposeEffect);
-});
-
-const sourceFiles = new Map<string, ts.SourceFile>();
-
-const cachingHost = (options: ts.CompilerOptions): ts.CompilerHost => {
-  const host = ts.createCompilerHost(options, true);
-  return {
-    ...host,
-    getSourceFile: (...args) => {
-      const [fileName, languageVersion] = args;
-      const key = `${fileName}\0${JSON.stringify(languageVersion)}`;
-      return Option.fromNullishOr(sourceFiles.get(key)).pipe(
-        Option.orElse(() =>
-          Option.fromNullishOr(host.getSourceFile(...args)).pipe(
-            Option.tap((created) => Option.some(sourceFiles.set(key, created))),
-          ),
-        ),
-        Option.getOrUndefined,
-      );
-    },
-  };
-};
-
-const ignoreUnrecoverable = (): void => {
-  Option.none();
-};
-
-const parseConfig = (configPath: string): Option.Option<ts.ParsedCommandLine> =>
-  Option.fromNullishOr(
-    ts.getParsedCommandLineOfConfigFile(
-      configPath,
-      {},
-      { ...ts.sys, onUnRecoverableConfigFileDiagnostic: ignoreUnrecoverable },
-    ),
-  );
-
 interface Overlay {
   readonly fileName: string;
   readonly text: string;
 }
 
-const overlayHost = (host: ts.CompilerHost, overlay: Overlay): ts.CompilerHost => ({
-  ...host,
-  fileExists: (fileName) => fileName === overlay.fileName || host.fileExists(fileName),
-  readFile: (fileName) =>
-    Option.match(
-      Option.liftPredicate(fileName, (name) => name === overlay.fileName),
-      {
-        onNone: () => host.readFile(fileName),
-        onSome: () => overlay.text,
-      },
-    ),
-  getSourceFile: (...args) => {
-    const [fileName, languageVersion] = args;
-    return Option.match(
-      Option.liftPredicate(fileName, (name) => name === overlay.fileName),
-      {
-        onNone: () => host.getSourceFile(...args),
-        onSome: () => ts.createSourceFile(fileName, overlay.text, languageVersion, true),
-      },
-    );
-  },
-});
-
-const withProjectReferences = (
-  config: ts.ParsedCommandLine,
-): Readonly<{ projectReferences?: readonly ts.ProjectReference[] }> =>
-  Option.match(Option.fromNullishOr(config.projectReferences), {
-    onNone: () => ({}),
-    onSome: (projectReferences) => ({ projectReferences }),
-  });
-
-const buildProgram = (configPath: string): Effect.Effect<Option.Option<BaseProgram>> =>
-  Effect.sync(() =>
-    parseConfig(configPath).pipe(
-      Option.map((config) => ({
-        config,
-        program: ts.createProgram({
-          rootNames: config.fileNames,
-          options: config.options,
-          host: cachingHost(config.options),
-          ...withProjectReferences(config),
-        }),
-      })),
-    ),
-  ).pipe(Effect.withSpan("oxlint-typed-rules.build-program", { attributes: { configPath } }));
-
-interface BaseProgram {
-  readonly config: ts.ParsedCommandLine;
-  readonly program: ts.Program;
+interface CompatSymbol {
+  readonly native: NativeSymbol;
+  readonly flags: SymbolFlags;
+  readonly name: string;
+  readonly getName: () => string;
+  readonly getFlags: () => SymbolFlags;
+  readonly getDeclarations: () => readonly Node[];
 }
 
-const programs = new Map<string, Option.Option<BaseProgram>>();
+interface CompatChecker {
+  readonly getSymbolAtLocation: (node: Node) => CompatSymbol | undefined;
+  readonly getAliasedSymbol: (symbol: CompatSymbol) => CompatSymbol;
+}
 
-const cachedProgram = (configPath: string): Effect.Effect<Option.Option<BaseProgram>> =>
-  Option.fromNullishOr(programs.get(configPath)).pipe(
-    Option.match({
-      onSome: Effect.succeed,
-      onNone: () =>
-        buildProgram(configPath).pipe(
-          Effect.tap((built) => Effect.sync(() => programs.set(configPath, built))),
-        ),
+interface CompatProgram {
+  readonly getSourceFile: (fileName: string) => SourceFile | undefined;
+  readonly getSourceFiles: () => readonly SourceFile[];
+  readonly getTypeChecker: () => CompatChecker;
+}
+
+const api = new API();
+
+const snapshots = new Map<API, Snapshot>([[api, api.createSnapshot()]]);
+
+const currentSnapshot = (): Snapshot =>
+  Option.fromNullishOr(snapshots.get(api)).pipe(
+    Option.getOrElse(() => {
+      const created = api.createSnapshot();
+      snapshots.set(api, created);
+      return created;
     }),
   );
 
-const overlays = new Map<string, ts.Program>();
+process.once("beforeExit", () => {
+  api.close();
+  Effect.runFork(runtime.disposeEffect);
+});
 
-const buildOverlayProgram = (
-  configPath: string,
-  base: BaseProgram,
-  overlay: Overlay,
-): Effect.Effect<ts.Program> =>
-  Effect.sync(() =>
-    ts.createProgram({
-      rootNames: [...new Set([...base.config.fileNames, overlay.fileName])],
-      options: base.config.options,
-      host: overlayHost(cachingHost(base.config.options), overlay),
-      oldProgram: base.program,
-      ...withProjectReferences(base.config),
+const isOwnSourceFile = (fileName: string): boolean =>
+  !Str.includes("/node_modules/")(fileName) && !Str.endsWith(".d.ts")(fileName);
+
+const compatSymbols = new WeakMap<NativeSymbol, CompatSymbol>();
+
+const toCompatSymbol = (project: Project, native: NativeSymbol): CompatSymbol =>
+  Option.fromNullishOr(compatSymbols.get(native)).pipe(
+    Option.getOrElse(() => {
+      const created: CompatSymbol = {
+        native,
+        flags: native.flags,
+        name: native.name,
+        getName: () => native.name,
+        getFlags: () => native.flags,
+        getDeclarations: () =>
+          pipe(
+            native.declarations,
+            Arr.flatMap((handle) =>
+              Option.fromNullishOr(handle.resolve(project)).pipe(Option.toArray),
+            ),
+          ),
+      };
+      compatSymbols.set(native, created);
+      return created;
     }),
-  ).pipe(
-    Effect.tap((program) => Effect.sync(() => overlays.set(configPath, program))),
-    Effect.withSpan("oxlint-typed-rules.build-overlay-program", {
+  );
+
+const compatChecker = (project: Project, checker: Checker): CompatChecker => ({
+  getSymbolAtLocation: (node) =>
+    Option.fromNullishOr(checker.getSymbolAtLocation(node)).pipe(
+      Option.map((native) => toCompatSymbol(project, native)),
+      Option.getOrUndefined,
+    ),
+  getAliasedSymbol: (symbol) => toCompatSymbol(project, checker.getAliasedSymbol(symbol.native)),
+});
+
+const ownSourceFiles = (program: NativeProgram): readonly SourceFile[] =>
+  pipe(
+    program.getSourceFileNames(),
+    Arr.filter(isOwnSourceFile),
+    Arr.flatMap((fileName) =>
+      Option.fromNullishOr(program.getSourceFile(fileName)).pipe(Option.toArray),
+    ),
+  );
+
+const compatPrograms = new WeakMap<NativeProgram, CompatProgram>();
+
+const toCompatProgram = (project: Project): CompatProgram =>
+  Option.fromNullishOr(compatPrograms.get(project.program)).pipe(
+    Option.getOrElse(() => {
+      const { program } = project;
+      const checker = compatChecker(project, project.checker);
+      const ownFiles: (readonly SourceFile[])[] = [];
+      const created: CompatProgram = {
+        getSourceFile: (fileName) => program.getSourceFile(fileName),
+        getSourceFiles: () =>
+          Arr.head(ownFiles).pipe(
+            Option.getOrElse(() => {
+              const files = ownSourceFiles(program);
+              ownFiles.push(files);
+              return files;
+            }),
+          ),
+        getTypeChecker: () => checker,
+      };
+      compatPrograms.set(program, created);
+      return created;
+    }),
+  );
+
+const matchesText = (project: Project, overlay: Overlay): boolean =>
+  Option.fromNullishOr(project.program.getSourceFile(overlay.fileName)).pipe(
+    Option.exists((sourceFile) => sourceFile.text === overlay.text),
+  );
+
+const currentProject = (overlay: Overlay): Option.Option<Project> =>
+  Option.fromNullishOr(currentSnapshot().getDefaultProjectForFile(overlay.fileName)).pipe(
+    Option.filter((project) => matchesText(project, overlay)),
+  );
+
+const openFile = (overlay: Overlay): Effect.Effect<Option.Option<Project>> =>
+  Effect.sync(() => {
+    const updated = currentSnapshot().update({
+      openFiles: [overlay.fileName],
+      fileSystem: createFileSystemLayer([[overlay.fileName, overlay.text]]),
+    });
+    snapshots.set(api, updated);
+    return Option.fromNullishOr(updated.getDefaultProjectForFile(overlay.fileName));
+  }).pipe(
+    Effect.withSpan("oxlint-typed-rules.open-file", {
       attributes: { fileName: overlay.fileName },
     }),
   );
 
-const matchesText = (program: ts.Program, overlay: Overlay): boolean =>
-  Option.fromNullishOr(program.getSourceFile(overlay.fileName)).pipe(
-    Option.exists((sourceFile) => sourceFile.getFullText() === overlay.text),
-  );
-
-const programWithText = (
-  configPath: string,
-  base: BaseProgram,
-  overlay: Overlay,
-): Effect.Effect<ts.Program> =>
-  Option.liftPredicate(base.program, (program) => matchesText(program, overlay)).pipe(
-    Option.orElse(() =>
-      Option.fromNullishOr(overlays.get(configPath)).pipe(
-        Option.filter((program) => matchesText(program, overlay)),
-      ),
-    ),
-    Option.match({
-      onSome: Effect.succeed,
-      onNone: () => buildOverlayProgram(configPath, base, overlay),
+const projectOfFile = (overlay: Overlay): Effect.Effect<Option.Option<Project>> =>
+  Effect.suspend(() =>
+    Option.match(currentProject(overlay), {
+      onSome: Effect.succeedSome,
+      onNone: () => openFile(overlay),
     }),
   );
 
-const fileExists = (fileName: string): boolean => ts.sys.fileExists(fileName);
-
-const programOfFile = (overlay: Overlay): Effect.Effect<Option.Option<ts.Program>> =>
-  Effect.gen(function* findProgram() {
-    const configPath = Option.fromNullishOr(ts.findConfigFile(overlay.fileName, fileExists));
-    return yield* Option.match(configPath, {
-      onNone: () => Effect.succeedNone,
-      onSome: (found) =>
-        cachedProgram(found).pipe(
-          Effect.flatMap(
-            Option.match({
-              onNone: () => Effect.succeedNone,
-              onSome: (base) => programWithText(found, base, overlay).pipe(Effect.asSome),
-            }),
-          ),
-        ),
-    });
-  });
-
-const programFor = (overlay: Overlay): Option.Option<ts.Program> =>
-  Exit.match(runtime.runSyncExit(programOfFile(overlay)), {
-    onSuccess: (program) => program,
+const programFor = (overlay: Overlay): Option.Option<CompatProgram> =>
+  Exit.match(runtime.runSyncExit(projectOfFile(overlay)), {
+    onSuccess: Option.map(toCompatProgram),
     onFailure: (cause) => {
       throw Cause.squash(cause);
     },
   });
 
-export type { Overlay };
+export type { CompatChecker, CompatProgram, CompatSymbol, Overlay };
 export { programFor };

@@ -20,6 +20,16 @@
     {
       "matchDepNames": ["@tanstack/eslint-plugin-start>globals"],
       "enabled": false
+    },
+    {
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "!/-dev\\./"
+    },
+    {
+      "matchPackageNames": ["@typescript-eslint/**"],
+      "prBodyNotes": [
+        "typescript-eslint#12803 が入ったリリースなら、#13 のとおり自作の変換層を捨てる。"
+      ]
     }
   ],
   "customManagers": [
