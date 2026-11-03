@@ -261,12 +261,14 @@ export default defineConfig({
           "renovate",
           "actions-lint",
           "fallow-all",
+          "size-all",
           "audit",
         ],
       },
       "test-all": "vp run -r test",
       syncpack: "syncpack lint",
       "fallow-all": "vp run -r fallow",
+      "size-all": "vp run -r size",
       audit: {
         command:
           'before="$(cksum pnpm-workspace.yaml)"; vp pm audit --fix || exit; if [ "$before" != "$(cksum pnpm-workspace.yaml)" ]; then echo "vp pm audit --fix rewrote pnpm-workspace.yaml. Run vp install and commit the diff." >&2; exit 1; fi',
