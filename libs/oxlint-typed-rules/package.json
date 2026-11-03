@@ -1,0 +1,66 @@
+{
+  "name": "@r_masseater/oxlint-typed-rules",
+  "version": "0.0.1",
+  "description": "Run ESLint rules that need type information as oxlint JS plugins, starting with TanStack Start's React Server Component rules.",
+  "keywords": [
+    "eslint",
+    "oxlint",
+    "oxlint-plugin",
+    "tanstack-start",
+    "typescript"
+  ],
+  "homepage": "https://github.com/masseater/oxlint-typed-rules#readme",
+  "bugs": {
+    "url": "https://github.com/masseater/oxlint-typed-rules/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/masseater/oxlint-typed-rules.git",
+    "directory": "libs/oxlint-typed-rules"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tanstack-start": "./src/tanstack-start.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "./tanstack-start": {
+        "types": "./dist/tanstack-start.d.mts",
+        "default": "./dist/tanstack-start.mjs"
+      },
+      "./package.json": "./package.json"
+    },
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "vp pack",
+    "test": "vp test run",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "effect": "catalog:stack",
+    "typescript": "catalog:typescript-api"
+  },
+  "devDependencies": {
+    "@tanstack/eslint-plugin-start": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript-eslint/utils": "catalog:",
+    "vite-plus": "catalog:stack"
+  },
+  "engines": {
+    "node": ">=26"
+  }
+}

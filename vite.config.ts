@@ -1,5 +1,4 @@
 import baselineJs from "eslint-plugin-baseline-js";
-import tanstackStart from "oxlint-plugin-tanstack-start";
 import { defineConfig } from "vite-plus";
 
 import {
@@ -10,7 +9,6 @@ import {
   eslintReactRules,
   generated,
   htmlReactRules,
-  pluginRules,
   reactHooksRules,
   restrictedImports,
   shadcnRules,
@@ -59,7 +57,6 @@ export default defineConfig({
       { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
       { name: "tanstack-query", specifier: "@tanstack/eslint-plugin-query" },
       { name: "tanstack-router", specifier: "@tanstack/eslint-plugin-router" },
-      { name: tanstackStart.meta.name, specifier: "oxlint-plugin-tanstack-start" },
       { name: "drizzle", specifier: "eslint-plugin-drizzle" },
       { name: "react-hooks-js", specifier: "eslint-plugin-react-hooks" },
       { name: "@eslint-react", specifier: "@eslint-react/eslint-plugin" },
@@ -75,7 +72,6 @@ export default defineConfig({
       "no-comments/disallowComments": ["error", { allow: ["oxlint-disable", "eslint-disable"] }],
       ...tanstackQueryRules,
       ...tanstackRouterRules,
-      ...pluginRules(tanstackStart),
       "drizzle/enforce-delete-with-where": "error",
       "drizzle/enforce-update-with-where": "error",
       ...shadcnRules,
@@ -172,7 +168,7 @@ export default defineConfig({
           "**/alchemy.run.ts",
           "**/*.worker.ts",
           "decision-rules.ts",
-          "libs/oxlint-plugin-*/src/index.ts",
+          "libs/oxlint-typed-rules/src/tanstack-start.ts",
         ],
         rules: { "import/no-default-export": "off" },
       },
@@ -264,16 +260,12 @@ export default defineConfig({
           "markdown-lint",
           "renovate",
           "actions-lint",
-          "steiger-all",
-          "db-check-all",
           "fallow-all",
           "audit",
         ],
       },
       "test-all": "vp run -r test",
       syncpack: "syncpack lint",
-      "steiger-all": "vp run -r steiger",
-      "db-check-all": "vp run -r db:check",
       "fallow-all": "vp run -r fallow",
       audit: {
         command: "vp pm audit",

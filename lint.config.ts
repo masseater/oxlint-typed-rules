@@ -192,7 +192,7 @@ const generated = [
   "AGENTS.md",
   "skills-lock.json",
   "CHANGELOG.md",
-  "libs/oxlint-plugin-tanstack-start/upstream/src/__tests__/**",
+  "libs/oxlint-typed-rules/upstream/src/__tests__/**",
 ];
 
 const decisionPluginName = decisionPlugin.meta.name;
@@ -217,13 +217,6 @@ const prefixed = (
       Array.map((rule) => `${prefix}/${rule}`),
     ),
   );
-
-const pluginRules = (
-  plugin: Readonly<{
-    meta: Readonly<{ name: string }>;
-    rules: Record.ReadonlyRecord<string, unknown>;
-  }>,
-): Rules => prefixed(plugin.meta.name, plugin);
 
 const turnedOff = (rules: Rules): Record.ReadonlyRecord<string, "off"> =>
   pipe(
@@ -275,7 +268,6 @@ export {
   eslintReactRules,
   generated,
   htmlReactRules,
-  pluginRules,
   reactHooksRules,
   requiredStack,
   restrictedImports,
