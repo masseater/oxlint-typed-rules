@@ -38,6 +38,10 @@ catalog:
   markdownlint-cli2: 0.24.0
   chrome-launcher: 1.2.2
   lighthouse: 13.6.0
+  size-limit: 14.3.0
+  "@size-limit/file": 14.3.0
+  publint: 0.3.25
+  "@arethetypeswrong/core": 0.18.5
   puppeteer-core: 25.16.0
   "@typescript-eslint/utils": ^8.72.1
 catalogs:

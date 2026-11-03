@@ -15,6 +15,8 @@ export default defineConfig({
       neverBundle: ["typescript"],
     },
     dts: true,
+    publint: { strict: true },
+    attw: { profile: "esm-only", level: "error" },
     outputOptions: { paths: { typescript: "typescript-6" } },
   },
   resolve: {
