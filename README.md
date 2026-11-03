@@ -1,75 +1,52 @@
-# typescript-template
+# oxlint-typed-rules
 
-Cloudflare で動く TypeScript の Web アプリを、検査・CI・デプロイ・AI エージェントとの作業の決まりが
-そろった状態から始めるための GitHub テンプレートである。
-新しいリポジトリを作るたびに、lint や CI やデプロイの仕組みを組み直さずに済む。
+型情報を要る ESLint のルールを、oxlint の JS プラグインとして動かす。
+oxlint の JS プラグインには型情報が渡らないので（[oxc#19596](https://github.com/oxc-project/oxc/issues/19596)）、
+tsconfig ごとに TypeScript の Program を作り、ルールが読む `parserServices` を用意する。
+ESLint を入れずに、型情報を使うルールを oxlint だけで回せる。
 
 ## 公開先
 
-- テンプレートのままのアプリ: <https://typescript-template-web-production-ntesuocc46gilfjl.masseater.workers.dev>
-- 静的な LP の見本: <https://typescript-template-landingpagjng25skxokz4cknxsbi3m7nu.masseater.workers.dev>
+- npm: [@r_masseater/oxlint-typed-rules](https://www.npmjs.com/package/@r_masseater/oxlint-typed-rules)
 
-## 始めたときに入っているもの
+## 移植したルール
 
-- TanStack Start と Effect で書く Web アプリ。D1 のデータベースと better-auth のログインを使える
-- 型検査・lint・テスト・依存の監査を 1 回で流す `vp run verify`
-- main に push すると、verify が通ったあとに Cloudflare へデプロイする GitHub Actions
-- Claude Code で作業するときのフックと作業の決まり
+- `@r_masseater/oxlint-typed-rules/tanstack-start`
+  - [@tanstack/eslint-plugin-start][tanstack] の 2 ルール
 
-`apps/lp` は公開ページの見本の LP である。ビルド時に作った HTML を、Worker を通さずに配る。
+[tanstack]: https://github.com/TanStack/router/tree/main/packages/eslint-plugin-start
+
+元のリポのテストを手を入れずに移植し、すべて同じ結果になることを確かめている。
+TanStack Start の 2 ルールは、ファイルをまたぐと違反を取りこぼす点を直してある。
 
 ## 使い方
 
-### 前提
-
-- [Vite+](https://viteplus.dev/guide/) の `vp` コマンド
-- `gh`、uv、Go、Python 3、jq。verify の一部がこれらで動く
-- Workers Paid プランの Cloudflare アカウント
-- OpenRouter の API キー。verify の lint の一部が使う
-
-### 1. テンプレートからリポジトリを作る
-
 ```sh
-gh repo create <owner>/<name> --template masseater/typescript-template \
-  --private --clone
-cd <name>
+vp add -D @r_masseater/oxlint-typed-rules
 ```
 
-### 2. アプリ名を変える
+```ts
+import { defineConfig } from "vite-plus";
 
-`apps/web/app-name.ts` の `APP_NAME` を、リポジトリの名前に変える。
-同じ Cloudflare アカウントにある別のリポジトリと名前が重なると、互いのリソースを置き換え合う。
-
-### 3. 手元で動かす
-
-```sh
-vp env on
-vp install
-cp .env.example .env
-vp exec --filter web alchemy profile edit --add Cloudflare
+export default defineConfig({
+  lint: {
+    jsPlugins: [
+      {
+        name: "tanstack-start",
+        specifier: "@r_masseater/oxlint-typed-rules/tanstack-start",
+      },
+    ],
+    rules: {
+      "tanstack-start/no-client-code-in-server-component": "error",
+      "tanstack-start/no-async-client-component": "error",
+    },
+  },
+});
 ```
 
-`vp env on` で、リポジトリが求める版の Node.js と pnpm を vp が用意する。
-`.env` の `OPENROUTER_API_KEY` にキーを書く。
-Cloudflare の認証情報は、最後のコマンドで作る Alchemy のプロファイルに入る。
+検査するファイルから一番近い `tsconfig.json` で Program を作る。
+エディタの未保存の内容も、その中身で Program を作り直して検査する。
 
-```sh
-vp run verify
-cd apps/web && vp run dev
-```
+## ライセンス
 
-verify が通り、dev が表示した URL を開いてアプリが出れば準備はできている。
-
-### 4. GitHub の設定をそろえる
-
-Actions の secrets、Actions による PR 作成の許可、既定ブランチのルールセットは、テンプレートから引き継がれない。
-[masseater/skills](https://github.com/masseater/skills) の `project-checklist` スキルの
-setup の手順で設定する。
-
-設定が済めば、main への push のたびに本番へデプロイされる。
-手元からデプロイするときは `apps/web` で `vp run deploy` を実行する。
-
-## テンプレートの更新を取り込む
-
-作ったリポジトリで Claude Code のセッションを始めると、テンプレートの新しいリリースがあれば知らせが出る。
-取り込むと答えれば、前のリリースとの差分を当てて verify を通すところまで進む。
+MIT。同梱する元のプラグインのライセンスは `libs/oxlint-typed-rules/LICENSE` にある。

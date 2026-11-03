@@ -1,6 +1,6 @@
 {
-  "name": "typescript-template",
-  "version": "0.0.11",
+  "name": "oxlint-typed-rules",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -31,7 +31,6 @@
     "fallow": "catalog:stack",
     "markdownlint-cli2": "catalog:",
     "oxlint-plugin-eslint": "catalog:",
-    "oxlint-plugin-tanstack-start": "workspace:*",
     "renovate": "catalog:stack",
     "skills": "catalog:",
     "syncpack": "catalog:",
