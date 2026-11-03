@@ -268,7 +268,8 @@ export default defineConfig({
       syncpack: "syncpack lint",
       "fallow-all": "vp run -r fallow",
       audit: {
-        command: "vp pm audit",
+        command:
+          'before="$(cksum pnpm-workspace.yaml)"; vp pm audit --fix || exit; if [ "$before" != "$(cksum pnpm-workspace.yaml)" ]; then echo "vp pm audit --fix rewrote pnpm-workspace.yaml. Run vp install and commit the diff." >&2; exit 1; fi',
         cache: false,
       },
       gitleaks: {
