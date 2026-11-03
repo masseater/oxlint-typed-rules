@@ -47,19 +47,30 @@
   "scripts": {
     "build": "vp pack",
     "test": "vp test run",
-    "prepublishOnly": "vp run build"
+    "prepublishOnly": "vp run build",
+    "size": "vp run build && size-limit"
   },
   "dependencies": {
     "effect": "catalog:stack",
     "typescript-6": "catalog:typescript-api"
   },
   "devDependencies": {
+    "@arethetypeswrong/core": "catalog:",
     "@effect/platform-node": "catalog:",
+    "@size-limit/file": "catalog:",
     "@tanstack/eslint-plugin-start": "catalog:",
     "@types/node": "catalog:",
     "@typescript-eslint/utils": "catalog:",
+    "publint": "catalog:",
+    "size-limit": "catalog:",
     "vite-plus": "catalog:stack"
   },
+  "size-limit": [
+    {
+      "path": "dist/*.mjs",
+      "limit": "23267 B"
+    }
+  ],
   "engines": {
     "node": ">=26"
   }

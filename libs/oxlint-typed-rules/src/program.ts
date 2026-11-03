@@ -1,5 +1,4 @@
-import { NodeServices } from "@effect/platform-node";
-import { Cause, Effect, Exit, Layer, ManagedRuntime, Option, Path } from "effect";
+import { Cause, Effect, Exit, Layer, ManagedRuntime, Option } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { OtlpSerialization, OtlpTracer } from "effect/observability";
 import ts from "typescript-6";
@@ -8,7 +7,7 @@ const tracing = OtlpTracer.layerFromConfig({
   resource: { serviceName: "oxlint-typed-rules" },
 }).pipe(Layer.provide(OtlpSerialization.layerJson), Layer.provide(FetchHttpClient.layer));
 
-const runtime = ManagedRuntime.make(Layer.mergeAll(tracing, NodeServices.layer));
+const runtime = ManagedRuntime.make(tracing);
 
 process.once("beforeExit", () => {
   Effect.runFork(runtime.disposeEffect);
@@ -163,14 +162,9 @@ const programWithText = (
 
 const fileExists = (fileName: string): boolean => ts.sys.fileExists(fileName);
 
-const programOfFile = (
-  overlay: Overlay,
-): Effect.Effect<Option.Option<ts.Program>, never, Path.Path> =>
+const programOfFile = (overlay: Overlay): Effect.Effect<Option.Option<ts.Program>> =>
   Effect.gen(function* findProgram() {
-    const path = yield* Path.Path;
-    const configPath = Option.fromNullishOr(
-      ts.findConfigFile(path.dirname(overlay.fileName), fileExists),
-    );
+    const configPath = Option.fromNullishOr(ts.findConfigFile(overlay.fileName, fileExists));
     return yield* Option.match(configPath, {
       onNone: () => Effect.succeedNone,
       onSome: (found) =>
