@@ -9,15 +9,15 @@ export default defineConfig({
     sourcemap: true,
     alias: {
       "@typescript-eslint/utils": local("src/typescript-eslint-utils.ts"),
+      typescript: local("src/ts-compat.ts"),
     },
     deps: {
       alwaysBundle: ["@tanstack/eslint-plugin-start", "@typescript-eslint/utils", "globals"],
-      neverBundle: ["typescript"],
+      neverBundle: [/^typescript-7(?:\/|$)/u],
     },
-    dts: true,
+    dts: { generator: "oxc" },
     publint: { strict: true },
     attw: { profile: "esm-only", level: "error" },
-    outputOptions: { paths: { typescript: "typescript-6" } },
   },
   resolve: {
     alias: [
@@ -35,7 +35,7 @@ export default defineConfig({
         replacement: local("upstream/rules/no-client-code-in-server-component.ts"),
       },
       { find: /^vitest$/u, replacement: "vite-plus/test" },
-      { find: /^typescript$/u, replacement: "typescript-6" },
+      { find: /^typescript$/u, replacement: local("src/ts-compat.ts") },
     ],
   },
   test: {

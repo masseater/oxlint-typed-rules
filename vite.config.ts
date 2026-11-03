@@ -117,14 +117,7 @@ export default defineConfig({
             {
               from: "package",
               package: "typescript",
-              name: [
-                "CompilerHost",
-                "CompilerOptions",
-                "Node",
-                "ParsedCommandLine",
-                "Program",
-                "SourceFile",
-              ],
+              name: ["Checker", "Node", "Program", "Project", "Snapshot", "SourceFile", "Symbol"],
             },
             {
               from: "package",

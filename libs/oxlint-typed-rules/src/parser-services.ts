@@ -1,6 +1,9 @@
 import { Option } from "effect";
-import ts from "typescript-6";
+import { SyntaxKind } from "typescript-7/ast";
+import type { Node, SourceFile } from "typescript-7/ast";
 import type { Context, Location, Range } from "vite-plus/lint/plugins";
+
+import type { CompatProgram } from "./program.ts";
 
 interface RangedNode {
   readonly range: Readonly<Range>;
@@ -13,33 +16,35 @@ interface MappedNode {
 }
 
 interface ParserServices {
-  readonly program: ts.Program;
-  readonly esTreeNodeToTSNodeMap: { readonly get: (node: RangedNode) => ts.Node };
-  readonly tsNodeToESTreeNodeMap: { readonly get: (node: ts.Node) => MappedNode | undefined };
+  readonly program: CompatProgram;
+  readonly esTreeNodeToTSNodeMap: { readonly get: (node: RangedNode) => Node };
+  readonly tsNodeToESTreeNodeMap: {
+    readonly get: (node: Node) => MappedNode | undefined;
+  };
 }
 
 interface FileProgram {
   readonly context: Context;
-  readonly program: ts.Program;
-  readonly sourceFile: ts.SourceFile;
+  readonly program: CompatProgram;
+  readonly sourceFile: SourceFile;
 }
 
-const covers = (node: ts.Node, sourceFile: ts.SourceFile, [start, end]: Readonly<Range>): boolean =>
-  node.getStart(sourceFile) <= start && node.end >= end;
+const covers = (node: Node, [start, end]: Readonly<Range>): boolean =>
+  node.getStart() <= start && node.end >= end;
 
-const spans = (node: ts.Node, sourceFile: ts.SourceFile, [start, end]: Readonly<Range>): boolean =>
-  node.getStart(sourceFile) === start && node.end === end;
+const spans = (node: Node, [start, end]: Readonly<Range>): boolean =>
+  node.getStart() === start && node.end === end;
 
-const innermostSpanning = (sourceFile: ts.SourceFile, range: Readonly<Range>): ts.Node => {
-  const visit = (node: ts.Node, found: ts.Node): ts.Node => {
-    if (!covers(node, sourceFile, range)) {
+const innermostSpanning = (sourceFile: SourceFile, range: Readonly<Range>): Node => {
+  const visit = (node: Node, found: Node): Node => {
+    if (!covers(node, range)) {
       return found;
     }
-    const matched = Option.liftPredicate(node, (candidate) =>
-      spans(candidate, sourceFile, range),
-    ).pipe(Option.getOrElse(() => found));
+    const matched = Option.liftPredicate(node, (candidate) => spans(candidate, range)).pipe(
+      Option.getOrElse(() => found),
+    );
     return Option.fromNullishOr(
-      ts.forEachChild(node, (child) =>
+      node.forEachChild((child) =>
         Option.liftPredicate(visit(child, matched), (deeper) => deeper !== matched).pipe(
           Option.getOrUndefined,
         ),
@@ -49,10 +54,10 @@ const innermostSpanning = (sourceFile: ts.SourceFile, range: Readonly<Range>): t
   return visit(sourceFile, sourceFile);
 };
 
-const toMappedNode = ({ context, sourceFile }: FileProgram, node: ts.Node): MappedNode => {
-  const start = node.getStart(sourceFile);
+const toMappedNode = ({ context }: FileProgram, node: Node): MappedNode => {
+  const start = node.getStart();
   return {
-    type: ts.SyntaxKind[node.kind],
+    type: SyntaxKind[node.kind],
     range: [start, node.end],
     loc: {
       start: context.sourceCode.getLocFromIndex(start),
@@ -62,7 +67,7 @@ const toMappedNode = ({ context, sourceFile }: FileProgram, node: ts.Node): Mapp
 };
 
 const createParserServices = (file: FileProgram): ParserServices => {
-  const toTs = new WeakMap<RangedNode, ts.Node>();
+  const toTs = new WeakMap<RangedNode, Node>();
   return {
     program: file.program,
     esTreeNodeToTSNodeMap: {

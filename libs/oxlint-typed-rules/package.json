@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "effect": "catalog:stack",
-    "typescript-6": "catalog:typescript-api"
+    "typescript-7": "catalog:typescript-api"
   },
   "devDependencies": {
     "@arethetypeswrong/core": "catalog:",
@@ -63,12 +63,13 @@
     "@typescript-eslint/utils": "catalog:",
     "publint": "catalog:",
     "size-limit": "catalog:",
+    "typescript": "catalog:typescript-api",
     "vite-plus": "catalog:stack"
   },
   "size-limit": [
     {
       "path": "dist/*.mjs",
-      "limit": "23267 B"
+      "limit": "23995 B"
     }
   ],
   "engines": {
