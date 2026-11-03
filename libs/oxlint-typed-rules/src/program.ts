@@ -2,7 +2,7 @@ import { NodeServices } from "@effect/platform-node";
 import { Cause, Effect, Exit, Layer, ManagedRuntime, Option, Path } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { OtlpSerialization, OtlpTracer } from "effect/observability";
-import ts from "typescript";
+import ts from "typescript-6";
 
 const tracing = OtlpTracer.layerFromConfig({
   resource: { serviceName: "oxlint-typed-rules" },

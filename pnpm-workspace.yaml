@@ -42,7 +42,7 @@ catalog:
   "@typescript-eslint/utils": ^8.72.1
 catalogs:
   typescript-api:
-    typescript: 6.0.3
+    typescript-6: npm:typescript@6.0.3
   stack:
     "@distilled.cloud/cloudflare": 1.0.0-rc.17
     "@effect/atom-react": 4.0.7
