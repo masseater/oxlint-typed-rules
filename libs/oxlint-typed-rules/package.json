@@ -63,6 +63,7 @@
     "@typescript-eslint/utils": "catalog:",
     "publint": "catalog:",
     "size-limit": "catalog:",
+    "typescript": "catalog:typescript-api",
     "vite-plus": "catalog:stack"
   },
   "size-limit": [
