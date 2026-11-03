@@ -51,12 +51,12 @@
     "size": "vp run build && size-limit"
   },
   "dependencies": {
-    "@effect/platform-node": "catalog:",
     "effect": "catalog:stack",
     "typescript-6": "catalog:typescript-api"
   },
   "devDependencies": {
     "@arethetypeswrong/core": "catalog:",
+    "@effect/platform-node": "catalog:",
     "@size-limit/file": "catalog:",
     "@tanstack/eslint-plugin-start": "catalog:",
     "@types/node": "catalog:",
