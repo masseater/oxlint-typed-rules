@@ -50,11 +50,11 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "@effect/platform-node": "catalog:",
     "effect": "catalog:stack",
     "typescript-6": "catalog:typescript-api"
   },
   "devDependencies": {
+    "@effect/platform-node": "catalog:",
     "@tanstack/eslint-plugin-start": "catalog:",
     "@types/node": "catalog:",
     "@typescript-eslint/utils": "catalog:",

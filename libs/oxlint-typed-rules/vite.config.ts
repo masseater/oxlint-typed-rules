@@ -11,7 +11,13 @@ export default defineConfig({
       "@typescript-eslint/utils": local("src/typescript-eslint-utils.ts"),
     },
     deps: {
-      alwaysBundle: ["@tanstack/eslint-plugin-start", "@typescript-eslint/utils", "globals"],
+      alwaysBundle: [
+        "@effect/platform-node",
+        "@effect/platform-node-shared",
+        "@tanstack/eslint-plugin-start",
+        "@typescript-eslint/utils",
+        "globals",
+      ],
       neverBundle: ["typescript"],
     },
     dts: true,
